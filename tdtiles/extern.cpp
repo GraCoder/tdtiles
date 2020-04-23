@@ -9,6 +9,10 @@ bool mkdirs(const char* path)
     return boost::filesystem::create_directories(path);
 }
 
+bool write_file(const std::string &f, std::string &c) {
+  return write_file(f.c_str(), c.c_str(), c.size());
+}
+
 bool write_file(const char* filename, const char* buf, unsigned long buf_len)
 {
     FILE *fp = fopen(filename, "wb+");

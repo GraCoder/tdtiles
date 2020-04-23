@@ -357,32 +357,39 @@ void make_gltf2_shader(tinygltf::Model& model, int mat_size, tinygltf::Buffer& b
         tinygltf::Material material;
         material.name = "osgb";
         char shaderBuffer[512];
-        sprintf(shaderBuffer, R"(
- {
-      "doubleSided": true,
-      "pbrMetallicRoughness": {
-        "baseColorTexture": {
-          "index": 0,
-          "texCoord": 0
-        },
-        "metallicFactor": 0,
-        "roughnessFactor": 0.5,
-        "baseColorFactor": [
-          1,
-          1,
-          1,
-          1
-        ]
-      },
-      "emissiveFactor": [
-        0,
-        0,
-        0
-      ],
-      "alphaMode": "OPAQUE"
-    }
-)", i);
-//        material.shaderMaterial = shaderBuffer;
+//        sprintf(shaderBuffer, R"(
+// {
+//      "doubleSided": true,
+//      "pbrMetallicRoughness": {
+//        "baseColorTexture": {
+//          "index": 0,
+//          "texCoord": 0
+//        },
+//        "metallicFactor": 0,
+//        "roughnessFactor": 0.5,
+//        "baseColorFactor": [
+//          1,
+//          1,
+//          1,
+//          1
+//        ]
+//      },
+//      "emissiveFactor": [
+//        0,
+//        0,
+//        0
+//      ],
+//      "alphaMode": "OPAQUE"
+//    }
+//)", i);
+        tinygltf::PbrMetallicRoughness pbr;
+        pbr.baseColorFactor = {1, 1, 1, 1};
+        pbr.baseColorTexture.index = 0;
+        pbr.baseColorTexture.texCoord = 0;
+        pbr.metallicFactor = 0;
+        pbr.roughnessFactor = 0.5;
+
+        material.pbrMetallicRoughness = pbr;
         model.materials.push_back(material);
     }
 }
@@ -1099,7 +1106,7 @@ std::string encode_tile_json(osg_tree& tree, double x, double y) {
 外面分配好 box[6][double]
 外面分配好 string [1024*1024]
 */
-extern "C" const char* osgb23dtile_path(
+extern "C" void* osgb23dtile_path(
     const char* in_path, const char* out_path, 
     double *box, int* len, double x, double y,int max_lvl) {
     
@@ -1123,8 +1130,10 @@ extern "C" const char* osgb23dtile_path(
     root.bbox.extend(0.2);
     memcpy(box, root.bbox.max.data(), 3 * sizeof(double));
     memcpy(box + 3, root.bbox.min.data(), 3 * sizeof(double));
+    void* str = malloc(json.length());
+    memcpy(str, json.c_str(), json.length());
     *len = json.length();
-    return json.c_str();
+    return str;
 }
 
 extern "C" bool osgb23dtile(

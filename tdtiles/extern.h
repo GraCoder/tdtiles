@@ -1,6 +1,7 @@
 #pragma once
 
 bool mkdirs(const char* path);
+bool write_file(const std::string &f, std::string &c);
 bool write_file(const char* filename, const char* buf, unsigned long buf_len);
 void log_error(const char* msg);
 
