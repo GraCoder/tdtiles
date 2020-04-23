@@ -56,15 +56,15 @@ void box_to_tileset_box(double box[6], double oBox[12]) {
   oBox[0] = (box[0] + box[3]) / 2.0;
   oBox[1] = (box[1] + box[4]) / 2.0;
   oBox[2] = (box[2] + box[5]) / 2.0;
-  oBox[3] = (box[3] - box[0]) / 2.0;
+  oBox[3] = (box[0] - box[3]) / 2.0;
   oBox[4] = 0;
   oBox[5] = 0;
   oBox[6] = 0;
-  oBox[7] = (box[4] - box[1]) / 2.0;
+  oBox[7] = (box[1] - box[4]) / 2.0;
   oBox[8] = 0;
   oBox[9] = 0;
   oBox[10] = 0;
-  oBox[11] = (box[5] - box[2]) / 2.0;
+  oBox[11] = (box[2] - box[5]) / 2.0;
 }
 
 double cal_geometric_error(double cy, int lvl) {
@@ -97,7 +97,9 @@ bool osgb_batch_convert_core(const std::string &in, const std::string &out,
     }
     std::string jsonRet((char *)ptr, jsRetLen);
     free(ptr);
-    tileVec.push_back({std::move(task.b3dmPath), std::move(jsonRet), *box});
+    ResultTile tileTmp{std::move(task.b3dmPath), std::move(jsonRet), *box};
+    memcpy(tileTmp.bbox, box, sizeof(double) * 6);
+    tileVec.push_back(tileTmp);
   }
   double rootBox[6] = {
       -DBL_MAX, -DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX,
@@ -162,7 +164,7 @@ bool osgb_batch_convert_core(const std::string &in, const std::string &out,
   std::vector<nlohmann::json> children;
   for (auto &tile : tileVec) {
     auto chJson = nlohmann::json::parse(tile.json);
-    auto bboxJson = chJson["boundingVolume"]["box"];
+    auto bboxJson = chJson["boundingVolume"]["box"]; 
 
     childJson["boundingVolume"]["box"] = bboxJson;
     auto url = (tile.b3dmPath + "/tileset.json").substr(out.size());

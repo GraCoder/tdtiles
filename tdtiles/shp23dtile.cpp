@@ -734,6 +734,7 @@ std::string make_polymesh(std::vector<Polygon_Mesh>& meshes) {
     for (int i = 0; i < meshes.size(); i++) {
         tinygltf::Node node;
         node.mesh = i;
+        node.rotation = { -0.70710678118654752440084436210485, 0, 0, 0.70710678118654752440084436210485};
         model.nodes.push_back(node);
     }
     // 一个场景

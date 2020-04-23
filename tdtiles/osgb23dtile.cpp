@@ -794,6 +794,7 @@ bool osgb2glb_buf(std::string path, std::string& glb_buff, std::vector<mesh_info
             for (int i = 0; i < MeshNum; i++) {
                 tinygltf::Node node;
                 node.mesh = i;
+                node.rotation = { -0.70710678118654752440084436210485, 0, 0, 0.70710678118654752440084436210485};
                 model.nodes.push_back(node);
             }
         }
