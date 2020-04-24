@@ -71,3 +71,13 @@ extern "C" {
 }
 
 ////////////////////////
+
+struct Config {
+	double lo;
+	double la;
+	double xoff;
+	double yoff;
+	double zoff;
+};
+
+extern Config config;

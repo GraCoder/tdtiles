@@ -115,7 +115,7 @@ bool osgb_batch_convert_core(const std::string &in, const std::string &out,
     }
   }
   double transform[16];
-  transform_c(cx, cy, cz, transform);
+  transform_c(cx, cy, cz - rootBox[5], transform);
   double bbox[12];
   box_to_tileset_box(rootBox, bbox);
   std::string rootRJson = R"(
@@ -185,44 +185,69 @@ bool osgb_batch_convert_core(const std::string &in, const std::string &out,
 bool osgb_batch_convert(const std::string &in, const std::string &out) {
   using namespace boost::filesystem;
   using namespace boost::property_tree;
-  if (!is_directory(in) || !exists(in + "/metadata.xml")) {
-    std::cerr << "path \"" + in +
-                     "\" must be a directory and has a file named metadata.xml"
-              << std::endl;
-    return false;
-  }
-  ptree pt, root;
-  try {
-    read_xml(in + "/metadata.xml", pt);
-    root = pt.get_child("ModelMetadata");
-  } catch (std::exception &e) {
-    std::cerr << e.what() << std::endl;
-    return false;
-  }
-  std::string srs, srsOrigin;
-  for (auto iter = root.begin(); iter != root.end(); iter++) {
-    if (iter->first == "SRS")
-      srs = iter->second.data();
-    else if (iter->first == "SRSOrigin")
-      srsOrigin = iter->second.data();
-  }
+
   double centerx = 0, centery = 0;
-  std::vector<std::string> outvec;
-  boost::algorithm::split(outvec, srs, boost::is_any_of(":"));
-  if (outvec.size() > 1) {
-    if (outvec[0] == "ENU") {
-      boost::algorithm::split(outvec, outvec[1], boost::is_any_of(","));
-      if (outvec.size() > 1) {
-        centerx = boost::lexical_cast<double>(outvec[1]);
-        centery = boost::lexical_cast<double>(outvec[0]);
-      } else
-        std::cerr << "parse ENU points error";
-    } else if (outvec[0] == "EPSG") {
-      int epsgId = boost::lexical_cast<int>(outvec[1]);
+  if (std::isnan(config.la) || std::isnan(config.la)) {
+    if (!is_directory(in) || !exists(in + "/metadata.xml")) {
+      std::cerr << "path \"" + in +
+        "\" must be a directory and has a file named metadata.xml"
+        << std::endl;
+      return false;
+    }
+    ptree pt, root;
+    try {
+      read_xml(in + "/metadata.xml", pt);
+      root = pt.get_child("ModelMetadata");
+    }
+    catch (std::exception& e) {
+      std::cerr << e.what() << std::endl;
+      return false;
+    }
+    std::string srs, srsOrigin;
+    for (auto iter = root.begin(); iter != root.end(); iter++) {
+      if (iter->first == "SRS")
+        srs = iter->second.data();
+      else if (iter->first == "SRSOrigin")
+        srsOrigin = iter->second.data();
+    }
+    std::vector<std::string> outvec;
+    boost::algorithm::split(outvec, srs, boost::is_any_of(":"));
+    if (outvec.size() > 1) {
+      if (outvec[0] == "ENU") {
+        boost::algorithm::split(outvec, outvec[1], boost::is_any_of(","));
+        if (outvec.size() > 1) {
+          centerx = boost::lexical_cast<double>(outvec[1]);
+          centery = boost::lexical_cast<double>(outvec[0]);
+        } else
+          std::cerr << "parse ENU points error";
+      } else if (outvec[0] == "EPSG") {
+        int epsgId = boost::lexical_cast<int>(outvec[1]);
+        std::vector<std::string> posVec;
+        boost::algorithm::split(posVec, srsOrigin, boost::is_any_of(","));
+        if (posVec.size() < 2) {
+          std::cerr << "epsg point not enough";
+          return false;
+        }
+        std::vector<double> dvec(posVec.size());
+        for (int i = 0; i < posVec.size(); i++)
+          dvec[i] = boost::lexical_cast<double>(posVec[i]);
+        auto gddata = initial_path().string() + "gdal_data";
+        putenv((std::string("gdal_data=") + gddata).c_str());
+        if (epsg_convert(epsgId, &dvec[0], gddata.c_str())) {
+          centerx = dvec[0];
+          centery = dvec[1];
+        } else {
+          std::cerr << "epsg convert failed.";
+          return false;
+        }
+      } else {
+        std::cerr << "EPSG or ENU is expected in SRS";
+      }
+    } else {
       std::vector<std::string> posVec;
       boost::algorithm::split(posVec, srsOrigin, boost::is_any_of(","));
       if (posVec.size() < 2) {
-        std::cerr << "epsg point not enough";
+        std::cerr << "wtk point not enough";
         return false;
       }
       std::vector<double> dvec(posVec.size());
@@ -230,35 +255,17 @@ bool osgb_batch_convert(const std::string &in, const std::string &out) {
         dvec[i] = boost::lexical_cast<double>(posVec[i]);
       auto gddata = initial_path().string() + "gdal_data";
       putenv((std::string("gdal_data=") + gddata).c_str());
-      if (epsg_convert(epsgId, &dvec[0], gddata.c_str())) {
+      if (wkt_convert(srs.c_str(), &dvec[0], gddata.c_str())) {
         centerx = dvec[0];
         centery = dvec[1];
       } else {
-        std::cerr << "epsg convert failed.";
+        std::cerr << "wkt convert failed.";
         return false;
       }
-    } else {
-      std::cerr << "EPSG or ENU is expected in SRS";
     }
   } else {
-    std::vector<std::string> posVec;
-    boost::algorithm::split(posVec, srsOrigin, boost::is_any_of(","));
-    if (posVec.size() < 2) {
-      std::cerr << "wtk point not enough";
-      return false;
-    }
-    std::vector<double> dvec(posVec.size());
-    for (int i = 0; i < posVec.size(); i++)
-      dvec[i] = boost::lexical_cast<double>(posVec[i]);
-    auto gddata = initial_path().string() + "gdal_data";
-    putenv((std::string("gdal_data=") + gddata).c_str());
-    if (wkt_convert(srs.c_str(), &dvec[0], gddata.c_str())) {
-      centerx = dvec[0];
-      centery = dvec[1];
-    } else {
-      std::cerr << "wkt convert failed.";
-      return false;
-    }
+    centerx = config.lo;
+    centery = config.la;
   }
-  return osgb_batch_convert_core(in, out, centerx, centery);
+  return osgb_batch_convert_core(in, out, centerx, centery, config.zoff);
 }
