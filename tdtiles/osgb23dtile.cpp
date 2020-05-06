@@ -98,7 +98,7 @@ double get_geometric_error(TileBox& bbox){
 
     double max_err = std::max((bbox.max[0] - bbox.min[0]),(bbox.max[1] - bbox.min[1]));
     max_err = std::max(max_err, (bbox.max[2] - bbox.min[2]));
-    return max_err / 20.0;
+    return max_err / 1080;
 //     const double pi = std::acos(-1);
 //     double round = 2 * pi * 6378137.0 / 128.0;
 //     return round / std::pow(2.0, lvl );
@@ -1053,8 +1053,14 @@ void calc_geometric_error(osg_tree& tree) {
     else {
         if(tree.sub_nodes[0].geometricError == 0) 
             tree.geometricError = get_geometric_error(tree.bbox);
-        else
-            tree.geometricError = tree.sub_nodes[0].geometricError * 2.0;
+        else {
+          float geoError = -FLT_MAX;
+          for (int i = 0; i < tree.sub_nodes.size(); i++) {
+            if (tree.sub_nodes[i].geometricError > geoError)
+              geoError = tree.sub_nodes[i].geometricError;
+          }
+            tree.geometricError = geoError * 2.0;
+        }
     }
 }
 

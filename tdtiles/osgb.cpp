@@ -114,6 +114,9 @@ bool osgb_batch_convert_core(const std::string &in, const std::string &out,
         rootBox[i] = tile.bbox[i];
     }
   }
+
+  double root_geometric_error = cal_geometric_error(cy, 10);
+
   double transform[16];
   transform_c(cx, cy, cz - rootBox[5], transform);
   double bbox[12];
