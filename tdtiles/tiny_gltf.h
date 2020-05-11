@@ -1319,7 +1319,7 @@ class TinyGLTF {
   /// Write glTF to stream, buffers and images will be embeded
   ///
   bool WriteGltfSceneToStream(Model *model, std::ostream &stream,
-                              bool prettyPrint, bool writeBinary);
+                              bool prettyPrint, bool writeBinary, bool dracoCompress = true);
 
   ///
   /// Write glTF to file.
@@ -1512,6 +1512,7 @@ class TinyGLTF {
 
 #ifdef TINYGLTF_ENABLE_DRACO
 #include "draco/compression/decode.h"
+#include "draco/compression/encode.h"
 #include "draco/core/decoder_buffer.h"
 #endif
 
@@ -4465,9 +4466,7 @@ static bool ParseDracoExtension(Primitive *primitive, Model *model,
     decodedBufferView.byteLength = bufferSize;
     decodedBufferView.byteOffset = pAttribute->byte_offset();
     decodedBufferView.byteStride = pAttribute->byte_stride();
-    decodedBufferView.target = primitive->indices >= 0
-                                   ? TINYGLTF_TARGET_ELEMENT_ARRAY_BUFFER
-                                   : TINYGLTF_TARGET_ARRAY_BUFFER;
+    //decodedBufferView.target = primitive->indices >= 0 ? TINYGLTF_TARGET_ELEMENT_ARRAY_BUFFER : TINYGLTF_TARGET_ARRAY_BUFFER;
     model->bufferViews.emplace_back(std::move(decodedBufferView));
 
     model->accessors[primitiveAttribute->second].bufferView =
@@ -7436,7 +7435,8 @@ static void WriteBinaryGltfFile(const std::string &output,
 
 bool TinyGLTF::WriteGltfSceneToStream(Model *model, std::ostream &stream,
                                       bool prettyPrint,
-                                      bool writeBinary) {
+                                      bool writeBinary,
+                                      bool dracoCompress) {
   JsonDocument output;
 
   /// Serialize all properties except buffers and images.

@@ -7,10 +7,24 @@
 #include "cmdline.h"
 
 
+#include "tiny_gltf.h"
+
+void test()
+{
+    std::string err, warn;
+    tinygltf::Model model;
+    tinygltf::TinyGLTF loader;
+
+    bool ret = loader.LoadASCIIFromFile(&model, &err, &warn, "D:\\debug\\draco\\testdata\\t\\WaterBottle.gltf");
+}
+
 
 
 int main(int argc, char **argv)
 {
+
+    //test();
+
     using namespace std;
 
     cmdline::parser p;
